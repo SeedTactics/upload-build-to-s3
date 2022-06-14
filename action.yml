@@ -1,0 +1,29 @@
+name: "seedtactics/upload-build-to-s3"
+description: "Uploads build output files to S3"
+author: "John Lenz"
+inputs:
+  aws_key:
+    required: true
+    description: "AWS Access Key"
+  aws_secret_key:
+    required: true
+    description: "AWS Secret Key"
+  s3_bucket:
+    required: true
+    description: "s3 bucket name"
+  input_file:
+    required: true
+    description: "File to upload to S3"
+  bucket_file:
+    required: true
+    description: "Path inside the bucket to upload the file to"
+  downloads_yml:
+    required: true
+    description: "Path inside the bucket to the downloads.yml file"
+  type:
+    required: true
+    description: "Build file type"
+
+runs:
+  using: "node16"
+  main: "dist/index.js"
