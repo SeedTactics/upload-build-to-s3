@@ -44,50 +44,56 @@ async function updateDownloadsYml(type: string, bucket_file: string, downloads: 
   return downloads;
 }
 
-export async function run(): Promise<void> {
-  const aws_key = core.getInput("aws_key");
-  const aws_secret = core.getInput("aws_secret");
-  const s3_bucket = core.getInput("s3_bucket");
-  const input_file = core.getInput("input_file");
-  const bucket_file = core.getInput("bucket_file");
-  const downloads_yml = core.getInput("downloads_yml");
-  const type = core.getInput("type");
+async function run(): Promise<void> {
+  try {
+    const aws_key = core.getInput("aws_key");
+    const aws_secret = core.getInput("aws_secret");
+    const s3_bucket = core.getInput("s3_bucket");
+    const input_file = core.getInput("input_file");
+    const bucket_file = core.getInput("bucket_file");
+    const downloads_yml = core.getInput("downloads_yml");
+    const type = core.getInput("type");
 
-  const s3 = new S3Client({
-    region: "us-west-2",
-    credentials: {
-      accessKeyId: aws_key,
-      secretAccessKey: aws_secret,
-    },
-  });
+    const s3 = new S3Client({
+      region: "us-west-2",
+      credentials: {
+        accessKeyId: aws_key,
+        secretAccessKey: aws_secret,
+      },
+    });
 
-  const oldDownloads = await s3.send(
-    new GetObjectCommand({
-      Bucket: s3_bucket,
-      Key: downloads_yml,
-    })
-  );
+    const oldDownloads = await s3.send(
+      new GetObjectCommand({
+        Bucket: s3_bucket,
+        Key: downloads_yml,
+      })
+    );
 
-  const oldDownloadsCt = oldDownloads.Body?.toString();
-  if (oldDownloadsCt === undefined || oldDownloadsCt === "") {
-    throw new Error("Unknown downloads file " + downloads_yml);
+    const oldDownloadsCt = oldDownloads.Body?.toString();
+    if (oldDownloadsCt === undefined || oldDownloadsCt === "") {
+      throw new Error("Unknown downloads file " + downloads_yml);
+    }
+
+    const newDownloads = await updateDownloadsYml(type, bucket_file, oldDownloadsCt);
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: s3_bucket,
+        Key: bucket_file,
+        Body: await readFileAsync(input_file),
+      })
+    );
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: s3_bucket,
+        Key: downloads_yml,
+        Body: newDownloads,
+      })
+    );
+  } catch (error) {
+    if (error instanceof Error) core.setFailed(error.message);
   }
-
-  const newDownloads = await updateDownloadsYml(type, bucket_file, oldDownloadsCt);
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: s3_bucket,
-      Key: bucket_file,
-      Body: await readFileAsync(input_file),
-    })
-  );
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: s3_bucket,
-      Key: downloads_yml,
-      Body: newDownloads,
-    })
-  );
 }
+
+run();
