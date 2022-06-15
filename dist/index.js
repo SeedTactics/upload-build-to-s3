@@ -90,7 +90,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const aws_key = core.getInput("aws_key");
-            const aws_secret = core.getInput("aws_secret");
+            const aws_secret = core.getInput("aws_secret_key");
             const s3_bucket = core.getInput("s3_bucket");
             const input_file = core.getInput("input_file");
             const bucket_file = core.getInput("bucket_file");
