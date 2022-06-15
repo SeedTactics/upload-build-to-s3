@@ -7,12 +7,12 @@ import { exec } from "child_process";
 const readFileAsync = promisify(readFile);
 const execAsync = promisify(exec);
 
-async function updateDownloadsYml(type: string, bucket_file: string, downloads: string): Promise<string> {
-  downloads += "\n";
-  downloads += ` - date: ${new Date().toISOString()}\n`;
-  downloads += `   type: ${type}\n`;
-  downloads += `   name: ${basename(bucket_file)}\n`;
-  downloads += `   bucketPath: ${bucket_file}\n`;
+async function updateDownloadsYml(type: string, bucket_file: string, oldDownloads: string): Promise<string> {
+  let entry = "\n";
+  entry += ` - date: ${new Date().toISOString()}\n`;
+  entry += `   type: ${type}\n`;
+  entry += `   name: ${basename(bucket_file)}\n`;
+  entry += `   bucketPath: ${bucket_file}\n`;
 
   const log = await execAsync(`git log -1 --pretty=%b`);
 
@@ -35,13 +35,17 @@ async function updateDownloadsYml(type: string, bucket_file: string, downloads: 
   }
 
   if (paragraphs.length > 0) {
-    downloads += `   notes:\n`;
+    entry += `   notes:\n`;
     for (const paragraph of paragraphs) {
-      downloads += `     - '${paragraph.replace("'", "''")}'\n`;
+      entry += `     - '${paragraph.replace("'", "''")}'\n`;
     }
   }
 
-  return downloads;
+  console.log("Creating entry");
+  console.log(entry);
+  console.log("");
+
+  return oldDownloads + entry;
 }
 
 async function run(): Promise<void> {
@@ -62,6 +66,7 @@ async function run(): Promise<void> {
       },
     });
 
+    console.log("Downloading s3://" + s3_bucket + ":" + downloads_yml);
     const oldDownloads = await s3.send(
       new GetObjectCommand({
         Bucket: s3_bucket,
@@ -76,6 +81,7 @@ async function run(): Promise<void> {
 
     const newDownloads = await updateDownloadsYml(type, bucket_file, oldDownloadsCt);
 
+    console.log("Uploading " + input_file + " to s3://" + s3_bucket + ":" + bucket_file);
     await s3.send(
       new PutObjectCommand({
         Bucket: s3_bucket,
@@ -84,6 +90,7 @@ async function run(): Promise<void> {
       })
     );
 
+    console.log("Uploading new downloads file to " + downloads_yml);
     await s3.send(
       new PutObjectCommand({
         Bucket: s3_bucket,
@@ -96,4 +103,5 @@ async function run(): Promise<void> {
   }
 }
 
+console.log("Starting upload of file to S3");
 run();
