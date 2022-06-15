@@ -39,7 +39,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
 const core = __importStar(__nccwpck_require__(9602));
 const client_s3_1 = __nccwpck_require__(5645);
 const fs_1 = __nccwpck_require__(7147);
@@ -48,13 +47,13 @@ const path_1 = __nccwpck_require__(1017);
 const child_process_1 = __nccwpck_require__(2081);
 const readFileAsync = (0, util_1.promisify)(fs_1.readFile);
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
-function updateDownloadsYml(type, bucket_file, downloads) {
+function updateDownloadsYml(type, bucket_file, oldDownloads) {
     return __awaiter(this, void 0, void 0, function* () {
-        downloads += "\n";
-        downloads += ` - date: ${new Date().toISOString()}\n`;
-        downloads += `   type: ${type}\n`;
-        downloads += `   name: ${(0, path_1.basename)(bucket_file)}\n`;
-        downloads += `   bucketPath: ${bucket_file}\n`;
+        let entry = "\n";
+        entry += ` - date: ${new Date().toISOString()}\n`;
+        entry += `   type: ${type}\n`;
+        entry += `   name: ${(0, path_1.basename)(bucket_file)}\n`;
+        entry += `   bucketPath: ${bucket_file}\n`;
         const log = yield execAsync(`git log -1 --pretty=%b`);
         const paragraphs = [];
         let curParagraph = "";
@@ -75,53 +74,66 @@ function updateDownloadsYml(type, bucket_file, downloads) {
             curParagraph = "";
         }
         if (paragraphs.length > 0) {
-            downloads += `   notes:\n`;
+            entry += `   notes:\n`;
             for (const paragraph of paragraphs) {
-                downloads += `     - '${paragraph.replace("'", "''")}'\n`;
+                entry += `     - '${paragraph.replace("'", "''")}'\n`;
             }
         }
-        return downloads;
+        console.log("Creating entry");
+        console.log(entry);
+        console.log("");
+        return oldDownloads + entry;
     });
 }
 function run() {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        const aws_key = core.getInput("aws_key");
-        const aws_secret = core.getInput("aws_secret");
-        const s3_bucket = core.getInput("s3_bucket");
-        const input_file = core.getInput("input_file");
-        const bucket_file = core.getInput("bucket_file");
-        const downloads_yml = core.getInput("downloads_yml");
-        const type = core.getInput("type");
-        const s3 = new client_s3_1.S3Client({
-            region: "us-west-2",
-            credentials: {
-                accessKeyId: aws_key,
-                secretAccessKey: aws_secret,
-            },
-        });
-        const oldDownloads = yield s3.send(new client_s3_1.GetObjectCommand({
-            Bucket: s3_bucket,
-            Key: downloads_yml,
-        }));
-        const oldDownloadsCt = (_a = oldDownloads.Body) === null || _a === void 0 ? void 0 : _a.toString();
-        if (oldDownloadsCt === undefined || oldDownloadsCt === "") {
-            throw new Error("Unknown downloads file " + downloads_yml);
+        try {
+            const aws_key = core.getInput("aws_key");
+            const aws_secret = core.getInput("aws_secret");
+            const s3_bucket = core.getInput("s3_bucket");
+            const input_file = core.getInput("input_file");
+            const bucket_file = core.getInput("bucket_file");
+            const downloads_yml = core.getInput("downloads_yml");
+            const type = core.getInput("type");
+            const s3 = new client_s3_1.S3Client({
+                region: "us-west-2",
+                credentials: {
+                    accessKeyId: aws_key,
+                    secretAccessKey: aws_secret,
+                },
+            });
+            console.log("Downloading s3://" + s3_bucket + ":" + downloads_yml);
+            const oldDownloads = yield s3.send(new client_s3_1.GetObjectCommand({
+                Bucket: s3_bucket,
+                Key: downloads_yml,
+            }));
+            const oldDownloadsCt = (_a = oldDownloads.Body) === null || _a === void 0 ? void 0 : _a.toString();
+            if (oldDownloadsCt === undefined || oldDownloadsCt === "") {
+                throw new Error("Unknown downloads file " + downloads_yml);
+            }
+            const newDownloads = yield updateDownloadsYml(type, bucket_file, oldDownloadsCt);
+            console.log("Uploading " + input_file + " to s3://" + s3_bucket + ":" + bucket_file);
+            yield s3.send(new client_s3_1.PutObjectCommand({
+                Bucket: s3_bucket,
+                Key: bucket_file,
+                Body: yield readFileAsync(input_file),
+            }));
+            console.log("Uploading new downloads file to " + downloads_yml);
+            yield s3.send(new client_s3_1.PutObjectCommand({
+                Bucket: s3_bucket,
+                Key: downloads_yml,
+                Body: newDownloads,
+            }));
         }
-        const newDownloads = yield updateDownloadsYml(type, bucket_file, oldDownloadsCt);
-        yield s3.send(new client_s3_1.PutObjectCommand({
-            Bucket: s3_bucket,
-            Key: bucket_file,
-            Body: yield readFileAsync(input_file),
-        }));
-        yield s3.send(new client_s3_1.PutObjectCommand({
-            Bucket: s3_bucket,
-            Key: downloads_yml,
-            Body: newDownloads,
-        }));
+        catch (error) {
+            if (error instanceof Error)
+                core.setFailed(error.message);
+        }
     });
 }
-exports.run = run;
+console.log("Starting upload of file to S3");
+run();
 //# sourceMappingURL=main.js.map
 
 /***/ }),
