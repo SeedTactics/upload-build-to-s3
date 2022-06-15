@@ -45,7 +45,6 @@ const fs_1 = __nccwpck_require__(7147);
 const util_1 = __nccwpck_require__(3837);
 const path_1 = __nccwpck_require__(1017);
 const child_process_1 = __nccwpck_require__(2081);
-const readFileAsync = (0, util_1.promisify)(fs_1.readFile);
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 function updateDownloadsYml(type, bucket_file, oldDownloads) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -85,8 +84,17 @@ function updateDownloadsYml(type, bucket_file, oldDownloads) {
         return oldDownloads + entry;
     });
 }
+function readableToString(stream) {
+    // in node 17.5, can use
+    // return Buffer.concat(await stream.toArray()).toString();
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        stream.on("data", (chunk) => chunks.push(chunk));
+        stream.once("end", () => resolve(Buffer.concat(chunks).toString()));
+        stream.once("error", reject);
+    });
+}
 function run() {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const aws_key = core.getInput("aws_key");
@@ -108,7 +116,7 @@ function run() {
                 Bucket: s3_bucket,
                 Key: downloads_yml,
             }));
-            const oldDownloadsCt = (_a = oldDownloads.Body) === null || _a === void 0 ? void 0 : _a.toString();
+            const oldDownloadsCt = yield readableToString(oldDownloads.Body);
             if (oldDownloadsCt === undefined || oldDownloadsCt === "") {
                 throw new Error("Unknown downloads file " + downloads_yml);
             }
@@ -117,7 +125,7 @@ function run() {
             yield s3.send(new client_s3_1.PutObjectCommand({
                 Bucket: s3_bucket,
                 Key: bucket_file,
-                Body: yield readFileAsync(input_file),
+                Body: (0, fs_1.createReadStream)(input_file),
             }));
             console.log("Uploading new downloads file to " + downloads_yml);
             yield s3.send(new client_s3_1.PutObjectCommand({

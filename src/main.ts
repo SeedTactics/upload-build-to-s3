@@ -1,10 +1,10 @@
 import * as core from "@actions/core";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { readFile } from "fs";
+import { createReadStream } from "fs";
 import { promisify } from "util";
 import { basename } from "path";
 import { exec } from "child_process";
-const readFileAsync = promisify(readFile);
+import type { Readable } from "stream";
 const execAsync = promisify(exec);
 
 async function updateDownloadsYml(type: string, bucket_file: string, oldDownloads: string): Promise<string> {
@@ -48,6 +48,18 @@ async function updateDownloadsYml(type: string, bucket_file: string, oldDownload
   return oldDownloads + entry;
 }
 
+function readableToString(stream: Readable): Promise<string> {
+  // in node 17.5, can use
+  // return Buffer.concat(await stream.toArray()).toString();
+
+  return new Promise<string>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.once("end", () => resolve(Buffer.concat(chunks).toString()));
+    stream.once("error", reject);
+  });
+}
+
 async function run(): Promise<void> {
   try {
     const aws_key = core.getInput("aws_key");
@@ -74,7 +86,7 @@ async function run(): Promise<void> {
       })
     );
 
-    const oldDownloadsCt = oldDownloads.Body?.toString();
+    const oldDownloadsCt = await readableToString(oldDownloads.Body as Readable);
     if (oldDownloadsCt === undefined || oldDownloadsCt === "") {
       throw new Error("Unknown downloads file " + downloads_yml);
     }
@@ -86,7 +98,7 @@ async function run(): Promise<void> {
       new PutObjectCommand({
         Bucket: s3_bucket,
         Key: bucket_file,
-        Body: await readFileAsync(input_file),
+        Body: createReadStream(input_file),
       })
     );
 
