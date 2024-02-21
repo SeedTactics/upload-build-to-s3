@@ -14,13 +14,13 @@
   },
   "author": "John Lenz",
   "dependencies": {
-    "@actions/core": "^1.8.2",
-    "@aws-sdk/client-s3": "^3.109.0"
+    "@actions/core": "^1.10.1",
+    "@aws-sdk/client-s3": "^3.515.0"
   },
   "devDependencies": {
-    "@types/node": "^17.0.42",
-    "@vercel/ncc": "^0.34.0",
-    "prettier": "^2.7.0",
-    "typescript": "^4.7.3"
+    "@types/node": "^20.11.19",
+    "@vercel/ncc": "^0.38.1",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3"
   }
 }
