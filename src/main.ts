@@ -1,11 +1,8 @@
 import * as core from "@actions/core";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createReadStream } from "fs";
-import { promisify } from "util";
 import { basename } from "path";
-import { exec } from "child_process";
 import type { Readable } from "stream";
-const execAsync = promisify(exec);
 
 async function updateDownloadsYml(type: string, bucket_file: string, oldDownloads: string): Promise<string> {
   let entry = "\n";
@@ -13,33 +10,6 @@ async function updateDownloadsYml(type: string, bucket_file: string, oldDownload
   entry += `   type: ${type}\n`;
   entry += `   name: ${basename(bucket_file)}\n`;
   entry += `   bucketPath: ${bucket_file}\n`;
-
-  const log = await execAsync(`git log -1 --pretty=%b`);
-
-  const paragraphs = [];
-  let curParagraph = "";
-  for (const line of log.stdout.split(/\r?\n/)) {
-    const lineTrimmed = line.trim();
-    if (lineTrimmed === "") {
-      if (curParagraph !== "") {
-        paragraphs.push(curParagraph);
-        curParagraph = "";
-      }
-    } else {
-      curParagraph += lineTrimmed + " ";
-    }
-  }
-  if (curParagraph !== "") {
-    paragraphs.push(curParagraph);
-    curParagraph = "";
-  }
-
-  if (paragraphs.length > 0) {
-    entry += `   notes:\n`;
-    for (const paragraph of paragraphs) {
-      entry += `     - '${paragraph.replace("'", "''")}'\n`;
-    }
-  }
 
   console.log("Creating entry");
   console.log(entry);

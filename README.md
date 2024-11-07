@@ -22,8 +22,6 @@ The plugin appends to the end of the YAML file an entry which looks like:
    type: the type from the action config
    name: just the filename from the bucket_file path
    bucketPath: the bucket_file path
-   notes:
-     - The git commit body (not the first line) from the commit which triggered the action
 ```
 
 The YAML file must already exist on S3. Also, note that the YAML entry is indented one space so
