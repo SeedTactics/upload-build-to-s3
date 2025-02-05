@@ -32,28 +32,20 @@ function readableToString(stream: Readable): Promise<string> {
 
 async function run(): Promise<void> {
   try {
-    const aws_key = core.getInput("aws_key");
-    const aws_secret = core.getInput("aws_secret_key");
     const s3_bucket = core.getInput("s3_bucket");
     const input_file = core.getInput("input_file");
     const bucket_file = core.getInput("bucket_file");
     const downloads_yml = core.getInput("downloads_yml");
     const type = core.getInput("type");
 
-    const s3 = new S3Client({
-      region: "us-west-2",
-      credentials: {
-        accessKeyId: aws_key,
-        secretAccessKey: aws_secret,
-      },
-    });
+    const s3 = new S3Client();
 
     console.log("Downloading s3://" + s3_bucket + ":" + downloads_yml);
     const oldDownloads = await s3.send(
       new GetObjectCommand({
         Bucket: s3_bucket,
         Key: downloads_yml,
-      })
+      }),
     );
 
     const oldDownloadsCt = await readableToString(oldDownloads.Body as Readable);
@@ -69,7 +61,7 @@ async function run(): Promise<void> {
         Bucket: s3_bucket,
         Key: bucket_file,
         Body: createReadStream(input_file),
-      })
+      }),
     );
 
     console.log("Uploading new downloads file to " + downloads_yml);
@@ -78,7 +70,7 @@ async function run(): Promise<void> {
         Bucket: s3_bucket,
         Key: downloads_yml,
         Body: newDownloads,
-      })
+      }),
     );
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message);

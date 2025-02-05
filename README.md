@@ -1,12 +1,12 @@
 # Github Action to Upload to S3
 
 This action uploads a file to S3 and also appends an entry
-into a YAML file also located on S3.
+into a YAML file also located on S3.  Use the
+[https://github.com/aws-actions/configure-aws-credentials](configure-aws-credentials)
+to get access tokens.
 
 The require config is:
 
-- aws_key: aws access key
-- aws_secret_key: secret access key
 - s3_bucket: s3 bucket name
 - input_file: path on the local github action runner to the file to upload
 - bucket_file: relative path within the bucket to which the file should be uploaded
